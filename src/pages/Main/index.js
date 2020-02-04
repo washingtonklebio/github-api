@@ -1,9 +1,13 @@
 import React, { Component } from 'react'
 
+import { toast } from 'react-toastify'
+
 import { FaGithubAlt, FaPlus, FaSpinner } from 'react-icons/fa'
 import api from '../../services/api'
+import { Link } from 'react-router-dom'
 
-import { Container, RepositoryContainer, Form, SubmitButton, List } from './styles'
+import { RepositoryContainer, Form, SubmitButton, List } from './styles'
+import Container from '../../Components/Container'
 
 class Main extends Component {
 
@@ -13,7 +17,7 @@ class Main extends Component {
         loading: false,
     }
 
-    componentDidMount () {
+    componentDidMount() {
         const repositories = localStorage.getItem('repositories')
 
         if (repositories) {
@@ -21,7 +25,7 @@ class Main extends Component {
         }
     }
 
-    componentDidUpdate (_, prevState) {
+    componentDidUpdate(_, prevState) {
         const { repositories } = this.state
 
         if (prevState.repositories !== repositories) {
@@ -36,57 +40,76 @@ class Main extends Component {
     handleSubmit = async evt => {
         evt.preventDefault()
 
-        this.setState({ loading: true })
+        try {
 
-        const { newRepo, repositories } = this.state
-        const response = await api.get(`/repos/${newRepo}`)
+            const { newRepo, repositories } = this.state
+            const exists = repositories.find(repository => repository.name === newRepo)
 
-        const data = {
-            name: response.data.full_name,
+            if (exists) {
+                throw new Error('Repositório duplicado')
+            }
+
+            this.setState({ loading: true })
+
+            const response = await api.get(`/repos/${newRepo}`)
+
+            const data = {
+                name: response.data.full_name,
+            }
+
+            this.setState({
+                repositories: [...repositories, data],
+                newRepo: '',
+                loading: false,
+            })
+
+            toast.success('Repositório adicionado com sucesso!')
+
+        } catch (e) {
+            toast.error('Ops... Ocorreu um erro ao adicionar repositório!')
+
+            this.setState({
+                newRepo: '',
+                loading: false,
+            })
         }
-
-        this.setState({
-            repositories: [... repositories, data],
-            newRepo: '',
-            loading: false,
-        })
     }
 
-    render () {
+    render() {
         const { newRepo, repositories, loading } = this.state
 
         return (
             <>
                 <Container>
                     <h1>
-                        <FaGithubAlt/>
+                        <FaGithubAlt />
                         Repositórios
                     </h1>
-        
+
                     <Form onSubmit={this.handleSubmit}>
-                        <input 
-                            type="text" 
+                        <input
+                            type="text"
                             placeholder="Adicionar repositório"
                             value={newRepo}
                             onChange={this.handleInputChange}
                         />
-                    
+
                         <SubmitButton loading={loading.toString()} emptyInput={newRepo}>
-                            { loading ? ( 
-                                <FaSpinner color="#fff" size={14} /> 
+                            {loading ? (
+                                <FaSpinner color="#fff" size={14} />
                             ) : (
-                                <FaPlus color="#fff" size={14} />
-                            )}
+                                    <FaPlus color="#fff" size={14} />
+                                )}
                         </SubmitButton>
                     </Form>
                 </Container>
                 <List>
                     {repositories.map(repository => (
-                        
+
                         <li key={repository.name}>
                             <RepositoryContainer color={Math.floor(Math.random() * 6)}>
                                 <span>{repository.name}</span>
-                                <a href="">Detalhes</a>
+                                <Link to={`/repository/${encodeURIComponent(repository.name)}`}>Detalhes</Link>
                             </RepositoryContainer>
                         </li>
                     ))}
